@@ -22,7 +22,7 @@ Run [CAURIS Runner Script] (scripts/CAURIS_Analysis_Runner.py) which takes the r
 <br />
 <br />
 
-### **Workflow 1: ** [Main_mycosnp](/docs/run_mycosnp.md)
+### **Workflow 1:** [Main_mycosnp](/docs/run_mycosnp.md)
 - Takes the specific csv files for each group of clades (I,II,III,IV,V)
 - Runs the Main MycoSNP workflow
 
