@@ -29,7 +29,7 @@ sample, fastq_1, fastq_2
 
 ## ⚠️ Important:
 
-- fastq_1 and fastq_2 must contain absolute Linux paths to the FASTQ files.
+- fastq_1 and fastq_2 must contain **absolute Linux paths** to the FASTQ files.
 - Files must exist at the specified locations before running the pipeline.
 
 ## pre_mycosnp.py
