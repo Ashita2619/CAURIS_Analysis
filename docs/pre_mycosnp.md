@@ -16,7 +16,7 @@ _______________________________________
 
 ## Input
 
-A samplesheet.csv file located inside the run directory.
+A **samplesheet.csv** file located inside the run directory.
 
 ## Required Format:
 ```
