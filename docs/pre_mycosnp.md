@@ -5,7 +5,8 @@ _______________________________________
 
 <br />
 
-```sample, fastq_1, fastq_2
+```
+sample, fastq_1, fastq_2
 312345, 312345_R1.fastq.gz, 312345_R2.fastq.gz
 ```
 
