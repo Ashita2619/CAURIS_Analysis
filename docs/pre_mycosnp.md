@@ -4,7 +4,7 @@ _______________________________________
 ## PRE_MYCOSNP Workflow 
 
 <br />
-# Overview
+## Overview
 
 <br />
 
@@ -14,11 +14,11 @@ This step determines the clade classification for each sample and generates a su
 
 <br />
 
-# Input
+## Input
 
 A samplesheet.csv file located inside the run directory.
 
-# Required Format:
+## Required Format:
 ```
 sample, fastq_1, fastq_2
 312345, 312345_R1.fastq.gz, 312345_R2.fastq.gz
@@ -27,12 +27,12 @@ sample, fastq_1, fastq_2
 <br />
 <br />
 
-# ⚠️ Important:
+## ⚠️ Important:
 
 - fastq_1 and fastq_2 must contain absolute Linux paths to the FASTQ files.
 - Files must exist at the specified locations before running the pipeline.
 
-# pre_mycosnp.py
+## pre_mycosnp.py
 - Takes the run directory as input.
 - Reads samplesheet.csv.
 - Executed the pre_mycosnp workflow
