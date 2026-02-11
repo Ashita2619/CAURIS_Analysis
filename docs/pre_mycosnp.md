@@ -9,9 +9,8 @@ _______________________________________
 
 <br />
 
-The pre_mycosnp.py script runs the PRE_MYCOSNP workflow from the CDCgov/mycosnp-nf Nextflow pipeline.
-
-This step determines the clade classification for each sample and generates a summary file used in downstream analysis.
+- The pre_mycosnp.py script runs the PRE_MYCOSNP workflow from the CDCgov/mycosnp-nf Nextflow pipeline.
+- This step determines the clade classification for each sample and generates a summary file used in downstream analysis.
 
 <br />
 
