@@ -34,3 +34,16 @@ Each Clade is mapped to a specific reference genome:
 | Clade_IV | [CladeIV.fna](https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_008275145.1/) | 
 | Clade_V  | [CladeV.fna](https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_016809505.1/)  | 
 
+<br />
+
+These refernces are defined inside run_mycosnp.py
+
+## What the script does
+
+<br />
+
+For each detected clade:
+1. Fillters samples belonging to that clade.
+2. Creates a clade-specific samplesheet.
+3. Runs the nextflow command to run the mycosnp pipeline.
+
