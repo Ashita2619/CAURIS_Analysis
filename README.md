@@ -43,7 +43,7 @@ Run [CAURIS Runner Script] (scripts/CAURIS_Analysis_Runner.py) which takes the r
 - **Missing FASTQ files**: Ensure that the samplesheet.csv has the correct paths to the FASTQ files.
        - If the workflow complains that a file is missing, verify that the files exist in the specified location.
 - **Nextflow/Docker issues**: Make sure that you have the necessary Nextflow and Docker versions installed. You can check the version by running:
-      - nextflow -v
+      - nextflow -v <br />
       - docker --version
 
   <br />
