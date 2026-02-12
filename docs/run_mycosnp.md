@@ -28,9 +28,9 @@ This step:
 Each Clade is mapped to a specific reference genome:
 | Clade | Reference FASTA |
 | :--- | :---: | 
-| Clade_I  | CladeI.fna  | 
-| Clade_II | CladeII.fna | 
-| Clade_III| CladeIII.fna| 
-| Clade_IV | CladeIV.fna | 
-| Clade_V  | CladeV.fna  | 
+| Clade_I  | [CladeI.fna](https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_016772135.1/)  | 
+| Clade_II | [CladeII.fna](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_003013715.1/) | 
+| Clade_III| [CladeIII.fna](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_002775015.1/)| 
+| Clade_IV | [CladeIV.fna](https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_008275145.1/) | 
+| Clade_V  | [CladeV.fna](https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_016809505.1/)  | 
 
