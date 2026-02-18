@@ -23,6 +23,6 @@ def run_full_pipeline(run_dir):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 2:
-        print("Usage: python CAURIS_analysis_runner.py <run_dir>")
+        print("Usage: python CAURIS_analysis_runner.py <run_date>")
         sys.exit(1)
     run_full_pipeline(sys.argv[1])
