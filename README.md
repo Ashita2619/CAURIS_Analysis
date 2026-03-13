@@ -3,7 +3,7 @@
 # Running Analysis
 The pipeline runs the [CDCgov/mycosnp-nf](https://github.com/CDCgov/mycosnp-nf) Nextflow workflow for detection of **Candida auris** Variants, Clades, SNP distances and Phylogenetic Analysis.
 
-Run [CAURIS Runner Script] (scripts/CAURIS_Analysis_Runner.py) which takes the rundate (MMDDYY)
+Run [CAURIS Runner Script](scripts/CAURIS_Analysis_Runner.py) which takes the rundate (MMDDYY)
 ```python 
   python CAURIS_Analysis_Runner.py RunDate
 ```
