@@ -1,191 +1,375 @@
 from sqlalchemy import create_engine, text
+import pandas as pd
 import re
 import time
 import sys
-import pandas as pd
-import re
-
+import math
+import traceback
 import warnings
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 
-#Table = "dbo.Results"
-#Table = "dbo.Run_Stats"
+class ms_sql_handler:
 
-class ms_sql_handler():
-    # constructor:
+    #################################################
+    # INIT
+    #################################################
+
     def __init__(self, obj):
+
         self.sql_user = obj.sql_user
         self.sql_pass = obj.sql_pass
         self.sql_server = obj.sql_server
         self.sql_db = obj.sql_db
-        #self.logger = obj.logger
-       
-        self.avg_depth_cutoff = obj.avg_depth_cutoff
-        self.percent_cvg_cutoff = obj.percent_cvg_cutoff
+
+        self.avg_depth_cutoff = getattr(obj, "avg_depth_cutoff", None)
+        self.percent_cvg_cutoff = getattr(obj, "percent_cvg_cutoff", None)
+
         self.engine = None
-#        self.log = Script_Logger("SQL_Handler")
-#        self.log.start_log("Starting")
 
-    # methods
-    # Create
+    #################################################
+    # CONNECT
+    #################################################
+
     def establish_db(self):
+
         try:
-            self.engine = create_engine('mssql+pyodbc://' + self.sql_user + ':' + self.sql_pass + '@' + self.sql_server + '/' + self.sql_db + '?driver=ODBC+Driver+17+for+SQL+Server')
+
+            conn_string = (
+                f"mssql+pyodbc://{self.sql_user}:{self.sql_pass}"
+                f"@{self.sql_server}/{self.sql_db}"
+                "?driver=ODBC+Driver+17+for+SQL+Server"
+            )
+
+            self.engine = create_engine(conn_string)
+
+            print("SQL Engine Created")
+
         except Exception as e:
+
+            print("Database Connection Error:")
             print(e)
-            #self.logger.critical(self.log_name + ": Issue in connection to mssql database")
-            time.sleep(20)
-            sys.exit
 
-    # Clear (DELETE)
+            time.sleep(5)
+            sys.exit()
+
+    #################################################
+    # CLEAR TABLES
+    #################################################
+
     def clear_db(self):
-        with self.engine.connect() as conn:
-            #self.logger.info("refresh: deleting all information from database")
-            query = "DELETE FROM dbo.Results"
-            res = conn.execute(text(query))
-            query = "DELETE FROM dbo.Run_Stats"
-            res = conn.execute(text(query))
-        #self.logger.info("refresh: database_clear finished!")
-    
 
-    # Read
-    def ss_read(self, query=None):
         with self.engine.connect() as conn:
-            df = pd.read_sql(text(query), con=self.engine)
-        return df
+
+            conn.execute(text("DELETE FROM dbo.Results"))
+            conn.execute(text("DELETE FROM dbo.Run_Stats"))
+
+    #################################################
+    # READ FUNCTIONS
+    #################################################
+
+    def ss_read(self, query=None):
+
+        return pd.read_sql(text(query), con=self.engine)
 
     def sub_read(self, query=None):
-        #local_query = query.replace("{avg_depth_cutoff}", str(self.avg_depth_cutoff))
-        #local_query = local_query.replace("{percent_cvg_cutoff}", str(self.percent_cvg_cutoff))
-        df = pd.read_sql(text(query), con=self.engine)
-        return df
+
+        return pd.read_sql(text(query), con=self.engine)
 
     def sub_lst_read(self, query=None, lst=None):
+
         hsn_query = "(" + ", ".join(lst) + ")"
-        local_query = query.replace("{hsn_query}", hsn_query)
-        # create dataframe that has structure of table_1 but only includes HSNs from GISAID.xlsx
-        df = pd.read_sql(text(local_query), con=self.engine)
-        return df
 
+        local_query = query.replace(
+            "{hsn_query}",
+            hsn_query
+        )
 
-    # Write
-    def to_sql_push(self, df=None, tbl_name=None, u_if_exists='append', u_index=False):
-        df.to_sql(tbl_name, self.engine, if_exists=u_if_exists, index=u_index)
+        return pd.read_sql(
+            text(local_query),
+            con=self.engine
+        )
 
-    def lst_push(self, df_lst=None, df_cols=None):
-        """
-        push results to database with the replace strategy
-        @params:
-            df_lst      - Required  : nested list that holds values to fill (List[List[]])
-            df_cols     - Required  : list of column names for supplied list (List[])
-        """
+    #################################################
+    # SIMPLE SQL PUSH
+    #################################################
+
+    def to_sql_push(
+        self,
+        df=None,
+        tbl_name=None,
+        u_if_exists="append",
+        u_index=False
+    ):
+
+        df.to_sql(
+            tbl_name,
+            self.engine,
+            if_exists=u_if_exists,
+            index=u_index
+        )
+
+    #################################################
+    # LIST PUSH
+    #################################################
+
+    def lst_push(
+        self,
+        df_lst=None,
+        df_cols=None
+    ):
+
         with self.engine.connect() as conn:
-            for i in range(len(df_lst)):
-                df_lst[i] = format_lst(df_lst[i])
-                df_lst_query = "(" + ", ".join(df_lst[i]) + ")"
-                query = f"""INSERT INTO dbo.Run_Stats {df_cols} VALUES {df_lst_query}"""
-                res = conn.execute(text(query))
-    def lst_ptr_push(self, df_lst=None, query=None, full=False, df=None):
-        """
-        push results to database with the replace (list/pointer) strategy
-        @params:
-            df_lst      - Required  : nested list that holds values to fill ([[x],[y]])
-            query       - Required  : stored in cache, generic string with placeholders (Str)
-            full        - Optional  : True if full dataframe being pushed. For use with refresh or ouside_lab scripts (Bool)
-            df          - Optional  : dataframe of values to clean. For use with refresh or outside_lab (Pandas DataFrame)
-        """
-        local_query = query
-        # connect to db
+
+            for row in df_lst:
+
+                row = format_lst(row)
+
+                row_query = (
+                    "(" +
+                    ", ".join(row) +
+                    ")"
+                )
+
+                query = (
+                    f"INSERT INTO dbo.Run_Stats "
+                    f"{df_cols} "
+                    f"VALUES {row_query}"
+                )
+                
+                sql = " ".join(query)
+
+                conn.execute(text(query))
+
+    #################################################
+    # LIST POINTER PUSH
+    #################################################
+
+    def lst_ptr_push(
+        self,
+        df_lst=None,
+        query=None,
+        full=False,
+        df=None
+    ):
+
         print("trying to connect to sql")
+
+        if query is None:
+
+            raise ValueError(
+                "query passed to lst_ptr_push is None"
+            )
+
+        print("Query type:", type(query))
+
         with self.engine.connect() as conn:
+
             print("connection passed!")
 
-            # Start a manual transaction
-            with conn.begin():  # This will ensure that the commit is done only after the loop
-                # generate a distinct query for every row, where query stores the
-                # generic value
-                for i in range(len(df_lst)):
-                    # if outside_lab or refresh, we are using full excel file, replace
-                    # as needed
-                    if full and df is not None:
-                        df_table_col_lst = list(df.columns)
-                        # remove any columns/entries that are 'nan' or 'None'
-                        element = 0
-                        df_ctr = 0
-                        while element < len(df_table_col_lst):
-                            x = str(df.iloc[i, df_ctr])
+            with conn.begin():
 
-                            if x in ["nan","None","extraction only, WGS"] or str(x) == "nan":
-                                self.log.write_warning("removing None/nan","This is being removed   "+x)
-                                del df_table_col_lst[element]
-                                df_ctr += 1
-                            else:
-                                self.log.write_log("This is being kept","Kepping this  "+x)
-                                element += 1
-                                df_ctr += 1
-                        # now, create the col list
-                        df_table_col_query = "(" + ", ".join(df_table_col_lst) + ") "
+                for row_num in range(len(df_lst)):
 
-                    # new_query stores distinct query for the corresponding row
-                    new_query = local_query
-
-                    if full:
-                        new_query = new_query.replace("{df_table_col_query}", df_table_col_query)
-                    # find all unique occurrances of '{/d}' and add them to a list
-                    query_track = list(set(re.findall("({.*?})", new_query)))
-
-                    # replace all occurrances of '{\d}' with the corresponding
-                    # values in the df_lst
                     try:
-                        #print(df_lst[i])
+
+                        #################################################
+                        # START QUERY
+                        #################################################
+
+                        new_query = str(query)
+
+                        #################################################
+                        # FULL DATAFRAME MODE
+                        #################################################
+
+                        if full and df is not None:
+
+                            valid_cols = []
+
+                            for col in df.columns:
+
+                                value = df.iloc[row_num][col]
+
+                                if pd.isna(value):
+                                    continue
+
+                                if str(value) in [
+                                    "None",
+                                    "nan",
+                                    "extraction only, WGS"
+                                ]:
+                                    continue
+
+                                valid_cols.append(col)
+
+                            df_table_col_query = (
+                                "(" +
+                                ", ".join(valid_cols) +
+                                ") "
+                            )
+
+                            new_query = new_query.replace(
+                                "{df_table_col_query}",
+                                df_table_col_query
+                            )
+
+                        #################################################
+                        # DEBUG
+                        #################################################
+
+                        print("\n====================")
+                        print("ROW:", row_num)
+                        print("QUERY TYPE:", type(new_query))
+                        print("RAW QUERY:")
+                        print(new_query)
+                        print("====================\n")
+
+                        #################################################
+                        # FIND PLACEHOLDERS
+                        #################################################
+
+                        query_track = list(
+                            set(
+                                re.findall(
+                                    r"({.*?})",
+                                    new_query
+                                )
+                            )
+                        )
+
+                        #################################################
+                        # REPLACE PLACEHOLDERS
+                        #################################################
+
                         for item in query_track:
-                            temp = df_lst[i][int(item[1:-1])].replace("'", "")
-                            new_query = new_query.replace(item, temp)
-                    except IndexError:
-                        pass
-                    # if outside_lab or refresh, we are using full excel file, replace
-                    # missing data as needed
-                    if full:
-                        new_query = new_query.replace(", CAST(\'nan\' AS DATE)", "")
-                        new_query = new_query.replace(", CAST(\'None\' AS DATE)", "")
-                        new_query = new_query.replace(", \'nan\'", "")
-                        new_query = new_query.replace(", \'None\'", "")
-                        new_query = new_query.replace(", nan", "")
-                        new_query = new_query.replace(", None", "")
-                        new_query = new_query.replace(", \'extraction only, WGS\'", "")
-                        new_query = new_query.replace("other", "OT")
-                        new_query = new_query.replace("(, ", "(")
-                        new_query = new_query.replace(" KS", " Kansas")
-                    new_query = new_query.replace(" \'nan\'", "NULL")
-                    new_query = new_query.replace(" nan", "NULL")
-                    new_query = new_query.replace("= ,", "= NULL,")
-                    new_query = new_query.replace("= '',", "= NULL,")
-                    new_query = new_query.replace('= "",', '= NULL,')
-                    new_query = new_query.replace("= \'None\',", "= NULL,")
-                    new_query = new_query.replace("CAST('nan' AS DATE)", "NULL")
-                    new_query = new_query.replace("luke's", 'lukes')
-                    new_query = new_query.replace("'None'", "NULL")
-                    new_query = new_query.replace("None", "NULL")
 
-                    # Execute the query for this row
-                    res = conn.execute(text(new_query))
-            
-            # Commit the transaction at the end
-            # No need to explicitly call conn.commit() if you're using the 'with conn.begin()' block
+                            try:
 
+                                idx = int(item[1:-1])
+
+                            except ValueError:
+
+                                continue
+
+                            try:
+
+                                value = df_lst[row_num][idx]
+
+                            except IndexError:
+
+                                print(
+                                    f"Missing index {idx} "
+                                    f"for row {row_num}"
+                                )
+
+                                continue
+
+                            if pd.isna(value):
+
+                                value = "NULL"
+
+                            else:
+
+                                value = str(value)
+
+                                value = value.replace(
+                                    "'",
+                                    ""
+                                )
+
+                            new_query = new_query.replace(
+                                item,
+                                value
+                            )
+
+                        #################################################
+                        # CLEANUP
+                        #################################################
+
+                        replacements = {
+
+                            "CAST('nan' AS DATE)": "NULL",
+                            "'None'": "NULL",
+                            "None": "NULL",
+                            "'nan'": "NULL",
+                            "= '',": "= NULL,",
+                            '= "",': "= NULL,",
+                            "= 'None',": "= NULL,",
+                            "luke's": "lukes"
+
+                        }
+
+                        for old, new in replacements.items():
+
+                            new_query = new_query.replace(
+                                old,
+                                new
+                            )
+
+                        #################################################
+                        # FINAL QUERY DEBUG
+                        #################################################
+
+                        print("FINAL QUERY:")
+                        print(new_query)
+
+                        #################################################
+                        # EXECUTE
+                        #################################################
+
+                        conn.execute(
+                            text(new_query)
+                        )
+
+                    except Exception as e:
+
+                        print("\nSQL ERROR")
+                        print("ROW:", row_num)
+                        print("ERROR:", e)
+
+                        traceback.print_exc()
+
+                        raise
+
+        print("DB Push Successful")
+
+
+#################################################
+# FORMAT LIST
+#################################################
 
 def format_lst(lst):
-    #iterate through the list
-    for i in range(len(lst)):
-        try:
 
-            # we only want to add quotes to entries that are not null
-            if not re.search(lst[i], "null"):
-                # attempt to convert them to float
-                try_float = float(lst[i])
-        except ValueError:
-            # valueError raised if float convert is attempted with string
-            lst[i] = f"'{lst[i]}'"
-    return lst
+    formatted = []
+
+    for value in lst:
+
+        if value is None:
+
+            formatted.append("NULL")
+            continue
+
+        if pd.isna(value):
+
+            formatted.append("NULL")
+            continue
+
+        if isinstance(value, (int, float)):
+
+            formatted.append(str(value))
+            continue
+
+        value = str(value)
+
+        value = value.replace(
+            "'",
+            ""
+        )
+
+        formatted.append(
+            f"'{value}'"
+        )
+
+    return formatted
