@@ -1,17 +1,21 @@
 import subprocess
-import sys
 import os
 
 def run_pre_mycosnp(run_dir):
-    # Extract run_date from run_dir
     run_date = os.path.basename(run_dir.rstrip("/"))
-    
+
     samplesheet = os.path.join(run_dir, "samplesheet.csv")
-    
+    srr_file = os.path.join(run_dir, "srr.csv")
+
     output_dir = f"/epi/home/ashita.jawali@kdhe.state.ks.us/WGS_Drive/Cauris/Output/Pre_mycosnp/{run_date}"
 
-    if not os.path.exists(samplesheet):
-        raise FileNotFoundError(f"SampleSheet not found: {samplesheet}")
+    # Decide which input to use
+    if os.path.exists(samplesheet):
+        file_flag = f"--input {samplesheet} "
+    elif os.path.exists(srr_file):
+        file_flag = f"--add_sra_file {srr_file} "
+    else:
+        raise FileNotFoundError("Neither samplesheet.csv nor srr.csv found")
 
     cmd = (
         f"cd {run_dir} && "
@@ -21,13 +25,8 @@ def run_pre_mycosnp(run_dir):
         "nextflow run CDCgov/mycosnp-nf "
         "--workflow PRE_MYCOSNP "
         "-profile docker "
-        f"--input {samplesheet} "
-        #"--add_sra_file srr.csv "
-        f"--outdir {output_dir} "
+        f"{file_flag}"
+        f"--outdir {output_dir}"
     )
 
-    subprocess.run(cmd, shell=True, executable="/bin/bash")
-    
-
-
-
+    subprocess.run(cmd, shell=True, executable="/bin/bash", check=True)
