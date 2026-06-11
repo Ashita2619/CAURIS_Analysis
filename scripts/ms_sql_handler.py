@@ -137,8 +137,6 @@ class ms_sql_handler:
                     f"{df_cols} "
                     f"VALUES {row_query}"
                 )
-                
-                sql = " ".join(query)
 
                 conn.execute(text(query))
 
@@ -178,7 +176,10 @@ class ms_sql_handler:
                         # START QUERY
                         #################################################
 
-                        new_query = str(query)
+                        if isinstance(query,list):
+                             new_query = " ".join(query)
+                        else:
+                            new_query = str(query)
 
                         #################################################
                         # FULL DATAFRAME MODE
@@ -219,12 +220,12 @@ class ms_sql_handler:
                         # DEBUG
                         #################################################
 
-                        print("\n====================")
-                        print("ROW:", row_num)
-                        print("QUERY TYPE:", type(new_query))
-                        print("RAW QUERY:")
-                        print(new_query)
-                        print("====================\n")
+                        #print("\n====================")
+                        #print("ROW:", row_num)
+                        #print("QUERY TYPE:", type(new_query))
+                        #print("RAW QUERY:")
+                        #print(new_query)
+                        #print("====================\n")
 
                         #################################################
                         # FIND PLACEHOLDERS
@@ -291,9 +292,11 @@ class ms_sql_handler:
                         replacements = {
 
                             "CAST('nan' AS DATE)": "NULL",
+                            "CAST('NaT' AS DATE)":"NULL",
                             "'None'": "NULL",
                             "None": "NULL",
                             "'nan'": "NULL",
+                            "'NaT'": "NULL",
                             "= '',": "= NULL,",
                             '= "",': "= NULL,",
                             "= 'None',": "= NULL,",
