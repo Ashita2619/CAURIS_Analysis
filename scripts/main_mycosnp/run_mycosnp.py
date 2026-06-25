@@ -3,15 +3,27 @@ import os
 import subprocess
 import glob
 import sys
+import re
 
 Clades = {
     "cladeI": "/epi/home/ashita.jawali@kdhe.state.ks.us/Documents/GitHub/CAuris/scripts/refs/CladeI.fna",
     "cladeII": "/epi/home/ashita.jawali@kdhe.state.ks.us/Documents/GitHub/CAuris/scripts/refs/CladeII.fna",
-    "cladeIII": "/epi/home/ashita.jawali@kdhe.state.ks.us/Documents/GitHub/CAuris/scripts/refs/CladeIII.fna",
+    "cladeIII": "/epi/home/ashita.jawali@kdhe.state.ks.ks.us/Documents/GitHub/CAuris/scripts/refs/CladeIII.fna",
     "cladeIV": "/epi/home/ashita.jawali@kdhe.state.ks.us/Documents/GitHub/CAuris/scripts/refs/CladeIV.fna",
     "cladeV": "/epi/home/ashita.jawali@kdhe.state.ks.us/Documents/GitHub/CAuris/scripts/refs/CladeV.fna",
     "cladeVI": "/epi/home/ashita.jawali@kdhe.state.ks.us/Documents/GitHub/CAuris/scripts/refs/CladeVI.fna"
 }
+
+
+def extract_clade(x):
+    if pd.isna(x):
+        return None
+
+    match = re.match(r"(clade[IVX]+)-", x)
+    if match:
+        return match.group(1)
+
+    return None
 
 
 def run_main_mycosnp(summary_csv, run_dir):
@@ -25,16 +37,12 @@ def run_main_mycosnp(summary_csv, run_dir):
     )
     os.makedirs(output_base, exist_ok=True)
 
-    # Extract clade key (e.g., "cladeIII" from "cladeIII-xyz")
-    df['clade_key'] = df['Subtype_Closest_Match'].apply(
-        lambda x: x.split("-")[0] if pd.notna(x) else None
-    )
+    df["clade_key"] = df["Subtype_Closest_Match"].apply(extract_clade)
 
-    # Drop rows without clade info
-    df = df.dropna(subset=['clade_key'])
+    df = df[df["clade_key"].isin(Clades.keys())]
+    df = df.dropna(subset=["clade_key"])
 
-    # Process each clade
-    for clade_name, group_df in df.groupby('clade_key'):
+    for clade_name, group_df in df.groupby("clade_key"):
 
         if clade_name not in Clades:
             print(f"⚠️ Warning: Clade '{clade_name}' not found in Clades dictionary.")
@@ -42,7 +50,6 @@ def run_main_mycosnp(summary_csv, run_dir):
 
         ref_path = Clades[clade_name]
 
-        # Create clade-specific samplesheet
         csv_file = os.path.join(run_dir, f"samplesheet_{clade_name}.csv")
 
         valid_samples = 0
@@ -66,30 +73,26 @@ def run_main_mycosnp(summary_csv, run_dir):
                 else:
                     print(f"⚠️ FASTQ files not found for sample: {sample}")
 
-        # No valid FASTQs
         if valid_samples == 0:
             print(f"⚠️ No valid samples for {clade_name}, skipping pipeline run.")
             continue
 
-        # Skip clades with only one sample
-        # RapidNJ cannot build a phylogeny from a single isolate
+        # 🔥 KEY CHANGE: allow singleton runs but disable phylogeny
+        skip_phylogeny_flag = ""
         if valid_samples == 1:
             print(
-                f"⚠️ Skipping Main MycoSNP for {clade_name}: "
-                f"only 1 sample available."
+                f"⚠️ Only 1 sample for {clade_name}. "
+                "Running MycoSNP without phylogeny."
             )
-            continue
+            skip_phylogeny_flag = "--skip_phylogeny "
 
         print(f"✅ Created {csv_file} with {valid_samples} samples for {clade_name}")
 
-        # Create output directory
         clade_output_dir = os.path.join(output_base, clade_name)
         os.makedirs(clade_output_dir, exist_ok=True)
 
-        # Optional flag
         snpeff_flag = "--snpeff true " if clade_name == "cladeI" else ""
 
-        # Build Nextflow command
         cmd = (
             f"cd {run_dir} && "
             "source $HOME/.bashrc && "
@@ -100,6 +103,7 @@ def run_main_mycosnp(summary_csv, run_dir):
             f"--input {csv_file} "
             f"--fasta {ref_path} "
             f"{snpeff_flag}"
+            f"{skip_phylogeny_flag}"
             f"--outdir {clade_output_dir}"
         )
 
@@ -107,12 +111,7 @@ def run_main_mycosnp(summary_csv, run_dir):
         print("COMMAND:\n", cmd)
 
         try:
-            subprocess.run(
-                cmd,
-                shell=True,
-                executable="/bin/bash",
-                check=True
-            )
+            subprocess.run(cmd, shell=True, executable="/bin/bash", check=True)
             print(f"✅ Completed {clade_name}")
 
         except subprocess.CalledProcessError as e:
@@ -127,7 +126,4 @@ if __name__ == "__main__":
         print("Usage: python run_mycosnp.py <summary_csv> <run_dir>")
         sys.exit(1)
 
-    summary_csv = sys.argv[1]
-    run_dir = sys.argv[2]
-
-    run_main_mycosnp(summary_csv, run_dir)
+    run_main_mycosnp(sys.argv[1], sys.argv[2])
